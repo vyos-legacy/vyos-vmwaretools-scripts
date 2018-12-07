@@ -1,0 +1,5 @@
+vyos-vmwaretools-scripts (1.0-1) unstable; urgency=low
+
+  * Initial release (Closes: T1028)  https://phabricator.vyos.net/T1028
+
+ -- hagbard <vyosdev@derith.de>  Thu, 06 Dec 2018 15:35:58 -0800

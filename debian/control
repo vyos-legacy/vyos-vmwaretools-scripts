@@ -1,0 +1,12 @@
+Source: vyos-vmwaretools-scripts
+Section: unknown
+Priority: optional
+Maintainer: hagbard <vyosdev@derith.de>
+Build-Depends: cdbs, debhelper (>= 9)
+Standards-Version: 3.9.5
+
+Package: vyos-vmwaretools-scripts
+Architecture: all
+Depends: ${misc:Depends}, open-vm-tools
+Description: additional user scripts for open-vm-tools 
+ Adding additional scrips, for being executed on vm-resume/suspmend events.
