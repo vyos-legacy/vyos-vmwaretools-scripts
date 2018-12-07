@@ -49,6 +49,7 @@ def apply(c):
         subprocess.call(['ip a a dev ' + intf + ' ' + a + ' &>/dev/null'], shell=True)
     else:
       sl.syslog(sl.LOG_NOTICE, "calling /sbin/dhclient -q " + intf)
+      subprocess.call(['/sbin/dhclient -r ' + intf + ' &>/dev/null'], shell=True)
       subprocess.call(['/sbin/dhclient -q ' + intf + ' &>/dev/null'], shell=True) 
 
 if __name__ == '__main__':
