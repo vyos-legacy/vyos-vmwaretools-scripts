@@ -7,6 +7,6 @@ Standards-Version: 3.9.5
 
 Package: vyos-vmwaretools-scripts
 Architecture: all
-Depends: ${misc:Depends}, open-vm-tools
+Depends: ${misc:Depends}, open-vm-tools (>= 2:10.1.5)
 Description: additional user scripts for open-vm-tools 
  Adding additional scrips, for being executed on vm-resume/suspmend events.
