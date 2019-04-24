@@ -18,13 +18,14 @@
 
 import sys
 import subprocess
+import syslog as sl
 
 from vyos.config import Config
 
 
-def main():
+def get_config():
     c = Config()
-
+    interfaces = dict()
     for intf in c.list_effective_nodes('interfaces ethernet'):
         # skip interfaces that are disabled or is configured for dhcp
         check_disable = "interfaces ethernet {} disable".format(intf)
@@ -32,20 +33,32 @@ def main():
         if c.exists_effective(check_disable) or c.exists_effective(check_dhcp):
             continue
 
-        # bring the interface up
-        cmd = ["ip", "link", "set", "dev", intf, "up"]
-        subprocess.call(cmd)
-
-        # add configured addresses to interface
+        # get addresses configured on the interface
         intf_addresses = c.return_effective_values(
             "interfaces ethernet {} address".format(intf)
         )
-        for addr in intf_addresses.split():
-            addr = addr.strip("'")
+        interfaces[intf] = [addr.strip("'") for addr in intf_addresses.split()]
+    return interfaces
+
+
+def apply(config):
+    for intf, addresses in config.items():
+        # bring the interface up
+        cmd = ["ip", "link", "set", "dev", intf, "up"]
+        sl.syslog(sl.LOG_NOTICE, " ".join(cmd))
+        subprocess.call(cmd)
+
+        # add configured addresses to interface
+        for addr in addresses:
             cmd = ["ip", "address", "add", addr, "dev", intf]
+            sl.syslog(sl.LOG_NOTICE, " ".join(cmd))
             subprocess.call(cmd)
-    return 0
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        config = get_config()
+        apply(config)
+    except ConfigError as e:
+        print(e)
+        sys.exit(1)
