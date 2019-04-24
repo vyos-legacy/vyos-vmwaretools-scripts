@@ -17,46 +17,48 @@
 #
 
 import sys
-import re
-import syslog as sl
 import subprocess
+import syslog as sl
 
 from vyos.config import Config
-from vyos import ConfigError
+
 
 def get_config():
-  c = Config()
-  if not c.exists_effective('interfaces ethernet'):
-    return None		
+    c = Config()
+    interfaces = dict()
+    for intf in c.list_effective_nodes('interfaces ethernet'):
+        # skip interfaces that are disabled or is configured for dhcp
+        check_disable = "interfaces ethernet {} disable".format(intf)
+        check_dhcp = "interfaces ethernet {} address dhcp".format(intf)
+        if c.exists_effective(check_disable) or c.exists_effective(check_dhcp):
+            continue
 
-  interfaces = {}
-  for intf in c.list_effective_nodes('interfaces ethernet'):
-    if not c.exists_effective('interfaces ethernet ' + intf + ' disable') and c.exists_effective('interfaces ethernet ' + intf + ' address'):
-      interfaces[intf] = re.sub("\'", "", c.return_effective_values('interfaces ethernet ' + intf + ' address')).split()
+        # get addresses configured on the interface
+        intf_addresses = c.return_effective_values(
+            "interfaces ethernet {} address".format(intf)
+        )
+        interfaces[intf] = [addr.strip("'") for addr in intf_addresses.split()]
+    return interfaces
 
-  return interfaces 
 
-def apply(c):
-  if not c:
-    return None
+def apply(config):
+    for intf, addresses in config.items():
+        # bring the interface up
+        cmd = ["ip", "link", "set", "dev", intf, "up"]
+        sl.syslog(sl.LOG_NOTICE, " ".join(cmd))
+        subprocess.call(cmd)
 
-  for intf, addr in c.items(): 
-    if not 'dhcp' in addr:
-      sl.syslog(sl.LOG_NOTICE, "ip l s dev " + intf + " up")
-      subprocess.call(['ip l s dev ' + intf + ' up ' + ' &>/dev/null'], shell=True)
-      for a in addr:
-        sl.syslog(sl.LOG_NOTICE, "ip a a " + a + " dev " + intf)
-        subprocess.call(['ip a a dev ' + intf + ' ' + a + ' &>/dev/null'], shell=True)
-    else:
-      sl.syslog(sl.LOG_NOTICE, "calling /sbin/dhclient -q " + intf)
-      subprocess.call(['/sbin/dhclient -r ' + intf + ' &>/dev/null'], shell=True)
-      subprocess.call(['/sbin/dhclient -q ' + intf + ' &>/dev/null'], shell=True) 
+        # add configured addresses to interface
+        for addr in addresses:
+            cmd = ["ip", "address", "add", addr, "dev", intf]
+            sl.syslog(sl.LOG_NOTICE, " ".join(cmd))
+            subprocess.call(cmd)
+
 
 if __name__ == '__main__':
-  try:
-    c = get_config()
-    apply(c)
-  except ConfigError as e:
-    print(e)
-    sys.exit(1)
-
+    try:
+        config = get_config()
+        apply(config)
+    except ConfigError as e:
+        print(e)
+        sys.exit(1)
