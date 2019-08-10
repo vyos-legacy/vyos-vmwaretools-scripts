@@ -21,6 +21,7 @@ import subprocess
 import syslog as sl
 
 from vyos.config import Config
+from vyos.util import vyos
 
 
 def get_config():
@@ -37,7 +38,7 @@ def get_config():
         intf_addresses = c.return_effective_values(
             "interfaces ethernet {} address".format(intf)
         )
-        interfaces[intf] = [addr.strip("'") for addr in intf_addresses.split()]
+        interfaces[intf] = [addr.strip("'") for addr in intf_addresses]
     return interfaces
 
 
@@ -59,6 +60,6 @@ if __name__ == '__main__':
     try:
         config = get_config()
         apply(config)
-    except ConfigError as e:
+    except vyos.ConfigError as e:
         print(e)
         sys.exit(1)
